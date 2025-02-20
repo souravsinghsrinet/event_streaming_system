@@ -169,3 +169,8 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
+
+
+# Ignore PyCharm generated config files
+.idea/*
+*/.idea/
