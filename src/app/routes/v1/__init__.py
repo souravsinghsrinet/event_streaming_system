@@ -1,0 +1,1 @@
+from src.app.routes.v1.track_event import track_event_router
