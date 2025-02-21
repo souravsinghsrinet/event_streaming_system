@@ -1,26 +1,22 @@
 import psycopg2
 from sqlalchemy import create_engine
-from sqlalchemy.orm import declarative_base, sessionmaker
+from sqlalchemy.orm import sessionmaker
 from src.app.utils.constants import DB_URL
+from src.app.models.event_model import Base, Event
 
 engine = create_engine(DB_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-Base = declarative_base()
+
+
+def create_tables():
+    Base.metadata.create_all(bind=engine)
 
 class DBHelper:
     def __init__(self):
-        self.conn = psycopg2.connect(
-            dbname="event_db",
-            user="user",
-            password="password",
-            host="postgres",
-            port="5432"
-        )
-        self.cursor = self.conn.cursor()
+        self.db = SessionLocal()
 
     def insert_event(self, event_name: str, user_id: int):
-        self.cursor.execute(
-            "INSERT INTO events (event_name, user_id) VALUES (%s, %s)",
-            (event_name, user_id)
-        )
-        self.conn.commit()
+        new_event = Event(event_name=event_name, user_id=user_id)
+        self.db.add(new_event)
+        self.db.commit()
+        self.db.refresh(new_event)
