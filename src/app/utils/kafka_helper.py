@@ -1,8 +1,10 @@
 from kafka import KafkaProducer, KafkaConsumer
 import json
 import time
-from src.app.utils.db_helper import DBHelper
+from src.app.utils.db_helper import get_db
 from src.app.utils.constants import KAFKA_BROKER
+from src.app.services.event_service import EventService
+
 
 # Retry mechanism to wait for Kafka to be ready
 def wait_for_kafka():
@@ -37,8 +39,7 @@ class KafkaHelper:
             value_deserializer=lambda v: json.loads(v.decode('utf-8'))
         )
 
-        # Database Helper
-        self.db_helper = DBHelper()
+        self.db = next(get_db())
 
     def send_event(self, topic: str, data: dict):
         self.producer.send(topic, data)
@@ -46,5 +47,6 @@ class KafkaHelper:
     def consume_events(self):
         for message in self.consumer:
             event_data = message.value
-            self.db_helper.insert_event(event_data["event"], event_data["user_id"])
+            e_s_obj = EventService(db=self.db)
+            e_s_obj.add_event_data(event_data=event_data)
             print(f"Stored event: {event_data}")
