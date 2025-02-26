@@ -22,11 +22,6 @@ consumer_thread = Thread(target=start_consumer, daemon=True)
 consumer_thread.start()
 
 app = FastAPI(lifespan=lifespan)
-# app = FastAPI(debug=True)
-
-# @app.on_event("startup")
-# def startup_event():
-#     create_tables()
 
 app.include_router(track_event_router)
 
