@@ -34,13 +34,6 @@ class KafkaHelper:
             value_serializer=lambda v: json.dumps(v).encode('utf-8')
         )
 
-        # Kafka Consumer
-        # self.consumer = KafkaConsumer(
-        #     "user_events",
-        #     bootstrap_servers=KAFKA_BROKER,
-        #     value_deserializer=lambda v: json.loads(v.decode('utf-8'))
-        # )
-
         self.consumer = KafkaConsumer(
             "user_events",
             bootstrap_servers=KAFKA_BROKER,
@@ -87,15 +80,3 @@ class KafkaHelper:
                 print(f"❌ Kafka consumer error: {e}")
                 time.sleep(5)  # Wait before retrying
 
-    def consume_events1(self):
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-
-        for message in self.consumer:
-            event_data = message.value
-            e_s_obj = EventService(db=self.db)
-            e_s_obj.add_event_data(event_data=event_data)
-            print(f"Stored event: {event_data}")
-
-            # Notify WebSocket clients
-            loop.run_until_complete(notify_clients(event_data))
