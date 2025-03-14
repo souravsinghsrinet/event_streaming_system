@@ -1,6 +1,8 @@
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
-from src.app.routes.v1 import track_event_router
+from src.app.routes.v1 import (
+    track_event_router, websocket_event_router
+)
 from threading import Thread
 from src.app.utils.kafka_helper import KafkaHelper
 from src.app.utils.db_helper import create_tables
@@ -24,6 +26,6 @@ consumer_thread.start()
 app = FastAPI(lifespan=lifespan)
 
 app.include_router(track_event_router)
-
+app.include_router(websocket_event_router)
 
 
