@@ -5,7 +5,7 @@ COPY ./requirements.txt /tmp/requirements.txt
 
 RUN pip install -r /tmp/requirements.txt
 
-RUN pip install uvicorn
+RUN pip install uvicorn[standard]
 
 COPY ./src/ /home/app/src/
 

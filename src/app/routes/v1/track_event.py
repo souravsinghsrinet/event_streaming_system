@@ -39,16 +39,3 @@ def get_events(event_name: str = None, limit: int = 10, offset: int = 0, db: Ses
         status_code=status.HTTP_200_OK
     )
 
-
-@track_event_router.websocket("/ws/events")
-async def websocket_endpoint(websocket: WebSocket):
-    await websocket.accept()
-    active_connections.add(websocket)
-
-    try:
-        while True:
-            await websocket.receive_text()
-    except WebSocketDisconnect:
-        active_connections.remove(websocket)
-
-

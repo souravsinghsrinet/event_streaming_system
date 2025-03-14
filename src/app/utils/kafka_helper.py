@@ -4,6 +4,8 @@ import time
 from src.app.utils.db_helper import get_db
 from src.app.utils.constants import KAFKA_BROKER
 from src.app.services.event_service import EventService
+from src.app.services.websocket_service import notify_clients
+import asyncio
 
 
 # Retry mechanism to wait for Kafka to be ready
@@ -33,10 +35,19 @@ class KafkaHelper:
         )
 
         # Kafka Consumer
+        # self.consumer = KafkaConsumer(
+        #     "user_events",
+        #     bootstrap_servers=KAFKA_BROKER,
+        #     value_deserializer=lambda v: json.loads(v.decode('utf-8'))
+        # )
+
         self.consumer = KafkaConsumer(
             "user_events",
             bootstrap_servers=KAFKA_BROKER,
-            value_deserializer=lambda v: json.loads(v.decode('utf-8'))
+            value_deserializer=lambda v: json.loads(v.decode('utf-8')),
+            enable_auto_commit=False,  # Disable auto commit for better control
+            auto_offset_reset="earliest",
+            group_id="event_consumer_group"  # ✅ Add a group_id
         )
 
         self.db = next(get_db())
@@ -45,8 +56,46 @@ class KafkaHelper:
         self.producer.send(topic, data)
 
     def consume_events(self):
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+
+        while True:
+            try:
+                messages = self.consumer.poll(timeout_ms=1000)  # Poll messages in batches
+                if messages:
+                    for _, records in messages.items():
+                        for message in records:
+                            event_data = message.value
+                            print(f"Processing event: {event_data}")
+
+                            # Retry logic
+                            for attempt in range(3):
+                                try:
+                                    e_s_obj = EventService(db=self.db)
+                                    e_s_obj.add_event_data(event_data=event_data)
+                                    self.consumer.commit()  # Commit offset after successful processing
+                                    print(f"✅ Event stored: {event_data}")
+
+                                    # Notify WebSocket clients
+                                    loop.run_until_complete(notify_clients(event_data))
+                                    break  # Exit retry loop on success
+
+                                except Exception as e:
+                                    print(f"❌ Error processing event (Attempt {attempt + 1}/3): {e}")
+                                    time.sleep(2)  # Wait before retrying
+            except Exception as e:
+                print(f"❌ Kafka consumer error: {e}")
+                time.sleep(5)  # Wait before retrying
+
+    def consume_events1(self):
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+
         for message in self.consumer:
             event_data = message.value
             e_s_obj = EventService(db=self.db)
             e_s_obj.add_event_data(event_data=event_data)
             print(f"Stored event: {event_data}")
+
+            # Notify WebSocket clients
+            loop.run_until_complete(notify_clients(event_data))
